@@ -1,0 +1,12 @@
+{
+  "name": "Afilia",
+  "short_name": "Afilia",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#090b0e",
+  "theme_color": "#0b0d10",
+  "description": "Piloto automático de ofertas para afiliados.",
+  "icons": [
+    {"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
