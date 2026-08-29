@@ -36,9 +36,40 @@ jobs:
               'content="width=device-width,initial-scale=1,viewport-fit=cover"',
               'content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"'
           )
-          script = '<script type="module" src="./app.js?v=031"></script>'
-          if script not in text:
-              text = text.replace('</body>', script + '</body>')
+          auth_script = '<script type="module" src="./app.js?v=032"></script>'
+          if auth_script not in text:
+              text = text.replace('</body>', auth_script + '</body>')
+
+          shopee_script = r'''<script>
+          (()=>{
+            const tuneShopee=()=>{
+              const sheets=[...document.querySelectorAll('.sheet')];
+              const sheet=sheets.find(s=>/Conectar\s+Shopee/i.test(s.textContent||''));
+              if(!sheet)return;
+              const labels=[...sheet.querySelectorAll('label')];
+              for(const l of labels){
+                const t=(l.textContent||'').trim().toLowerCase();
+                if(t.includes('identificação')) l.textContent='APP ID';
+                if(t.includes('chave de acesso')) l.textContent='SECRET';
+              }
+              const inputs=[...sheet.querySelectorAll('input')];
+              if(inputs[0]) inputs[0].placeholder='Cole o App ID da Shopee';
+              if(inputs[1]){inputs[1].placeholder='Cole o Secret da Shopee';inputs[1].type='password';}
+              if(!sheet.querySelector('#shopeeApiHelp')){
+                const box=document.createElement('div');
+                box.id='shopeeApiHelp';
+                box.className='notice warn';
+                box.innerHTML='<strong>Use as credenciais da API de Afiliados.</strong><br>Não informe sua senha da Shopee. O acesso oficial usa <b>App ID</b> e <b>Secret</b>. Se sua conta ainda não possui essas credenciais, você pode continuar usando o Afilia sem conectar a API por enquanto.';
+                const actions=sheet.querySelector('.actions,.connectActions');
+                if(actions) actions.before(box); else sheet.appendChild(box);
+              }
+            };
+            new MutationObserver(tuneShopee).observe(document.body,{childList:true,subtree:true});
+            document.addEventListener('click',()=>setTimeout(tuneShopee,30),true);
+          })();
+          </script>'''
+          if 'shopeeApiHelp' not in text:
+              text = text.replace('</body>', shopee_script + '</body>')
           index.write_text(text, encoding='utf-8')
 
           auth = Path('auth.html')
@@ -48,14 +79,70 @@ jobs:
                   'content="width=device-width,initial-scale=1,viewport-fit=cover"',
                   'content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"'
               )
+              strength_script = r'''<script>
+              (()=>{
+                const common=new Set(['1234567890','password','password123','senha123456','qwerty12345','admin123456','iloveyou123','1111111111']);
+                const p=document.getElementById('password');
+                const go=document.getElementById('go');
+                const signup=document.getElementById('signupTab');
+                if(!p||!go||!signup)return;
+                const wrap=document.createElement('div');
+                wrap.id='pwStrength';
+                wrap.style.cssText='display:none;margin-top:9px';
+                wrap.innerHTML='<div style="height:7px;border-radius:999px;background:#20262d;overflow:hidden"><div id="pwBar" style="height:100%;width:0;background:#ff8b8b;transition:.2s"></div></div><div id="pwText" style="margin-top:6px;color:#8c97a6;font-size:11px">Use pelo menos 10 caracteres.</div>';
+                p.parentElement.after(wrap);
+                const score=v=>{
+                  if(!v)return 0;
+                  const lower=v.toLowerCase();
+                  if(common.has(lower))return 0;
+                  let s=0;
+                  if(v.length>=10)s++;
+                  if(v.length>=14)s++;
+                  if(/[a-z]/.test(v)&&/[A-Z]/.test(v))s++;
+                  if(/\d/.test(v))s++;
+                  if(/[^A-Za-z0-9]/.test(v))s++;
+                  return Math.min(4,s);
+                };
+                const strong=v=>{
+                  if(common.has((v||'').toLowerCase()))return false;
+                  const classes=[/[a-z]/,/[A-Z]/,/\d/,/[^A-Za-z0-9]/].filter(r=>r.test(v)).length;
+                  return (v.length>=10&&classes>=3)||(v.length>=14&&classes>=2);
+                };
+                const update=()=>{
+                  const isSignup=signup.classList.contains('on');
+                  wrap.style.display=isSignup?'block':'none';
+                  if(!isSignup)return;
+                  const s=score(p.value),bar=document.getElementById('pwBar'),txt=document.getElementById('pwText');
+                  const widths=['8%','25%','50%','75%','100%'];
+                  const labels=['Muito fraca','Fraca','Razoável','Boa','Forte'];
+                  const colors=['#ff6d6d','#ff8b8b','#ffb476','#d4ff32','#45df8e'];
+                  bar.style.width=widths[s];bar.style.background=colors[s];txt.textContent=labels[s]+' • prefira uma senha única';
+                };
+                p.addEventListener('input',update);
+                signup.addEventListener('click',()=>setTimeout(update,0));
+                document.getElementById('loginTab')?.addEventListener('click',()=>setTimeout(update,0));
+                go.addEventListener('click',e=>{
+                  if(signup.classList.contains('on')&&!strong(p.value)){
+                    e.preventDefault();e.stopImmediatePropagation();
+                    const st=document.getElementById('status');
+                    st.textContent='Crie uma senha mais forte: 10+ caracteres e misture letras, números e símbolo.';
+                    st.className='status show err';
+                  }
+                },true);
+              })();
+              </script>'''
+              if 'pwStrength' not in a:
+                  a = a.replace('</body>', strength_script + '</body>')
               auth.write_text(a, encoding='utf-8')
           PY
 
       - name: Verify production wiring
         shell: bash
         run: |
-          grep -q 'app.js?v=031' index.html
+          grep -q 'app.js?v=032' index.html
           grep -q 'user-scalable=no' index.html
+          grep -q 'shopeeApiHelp' index.html
+          grep -q 'pwStrength' auth.html
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
