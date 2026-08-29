@@ -1,7 +1,27 @@
-const CACHE='afilia-v7';
-const CORE=['./','./index.html','./auth.html','./manifest.json','./icon.svg'];
-self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).catch(()=>{}))});
-self.addEventListener('activate',e=>{e.waitUntil(Promise.all([self.clients.claim(),caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))]))});
-const PROFILE_SCRIPT=`<script type="module">import{createClient}from'https://esm.sh/@supabase/supabase-js@2';const sb=createClient('https://yjgwlofhordbmjomxcdx.supabase.co','sb_publishable_qASwZXIwsbouYZpC-X0YWA_675aTqWN',{auth:{persistSession:true,autoRefreshToken:true}});const{data:{session}}=await sb.auth.getSession();if(!session){location.replace('./auth.html');}window.openProfile=async()=>{const{data:{user}}=await sb.auth.getUser();const email=user?.email||'Conta Afilia';if(typeof openModal==='function'){openModal('<h3>Minha conta</h3><p>'+email+'</p><div class="notice good"><strong>Conta ativa</strong><br>Telegram, templates e integrações ficam vinculados a esta conta.</div><div class="actions"><button class="btn secondary full" onclick="closeModal()">Voltar</button><button class="btn danger full" onclick="logoutAfilia()">Sair da conta</button></div>')}};window.logoutAfilia=async()=>{await sb.auth.signOut();['afilia_templates','afilia_active_template','afilia_queue','afilia_connections','afilia_offers'].forEach(k=>localStorage.removeItem(k));location.replace('./auth.html?loggedout=1')};</script>`;
-async function appResponse(req){const resp=await fetch(req,{cache:'no-store'});let html=await resp.text();html=html.replace('<div class="profile">👤</div>','<div class="profile" role="button" aria-label="Minha conta" onclick="openProfile()">👤</div>');html=html.replace('</body>',PROFILE_SCRIPT+'</body>');return new Response(html,{status:resp.status,statusText:resp.statusText,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}})}
-self.addEventListener('fetch',e=>{const r=e.request,u=new URL(r.url);if(r.mode==='navigate'&&u.origin===self.location.origin){const entry=u.pathname.endsWith('/')||u.pathname.endsWith('/index.html');if(entry&&u.searchParams.get('auth')!=='1'){e.respondWith(fetch('./auth.html',{cache:'no-store'}).catch(()=>caches.match('./auth.html')));return}if(entry){e.respondWith(appResponse(r).catch(()=>fetch('./auth.html',{cache:'no-store'})));return}e.respondWith(fetch(r,{cache:'no-store'}).catch(()=>caches.match(r)));return}e.respondWith(caches.match(r).then(c=>c||fetch(r)))})
+const CACHE='afilia-v8';
+const CORE=['./','./index.html','./auth.html','./app.js','./manifest.json','./icon.svg'];
+self.addEventListener('install',event=>{
+  self.skipWaiting();
+  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)).catch(()=>{}));
+});
+self.addEventListener('activate',event=>{
+  event.waitUntil(Promise.all([
+    self.clients.claim(),
+    caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))
+  ]));
+});
+self.addEventListener('fetch',event=>{
+  const req=event.request;
+  if(req.method!=='GET')return;
+  const url=new URL(req.url);
+  if(url.origin!==self.location.origin)return;
+  if(req.mode==='navigate'){
+    event.respondWith(fetch(req,{cache:'no-store'}).catch(()=>caches.match(req).then(r=>r||caches.match('./index.html'))));
+    return;
+  }
+  event.respondWith(fetch(req,{cache:'no-store'}).then(resp=>{
+    const copy=resp.clone();
+    caches.open(CACHE).then(cache=>cache.put(req,copy)).catch(()=>{});
+    return resp;
+  }).catch(()=>caches.match(req)));
+});
