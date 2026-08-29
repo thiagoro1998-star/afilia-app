@@ -23,14 +23,50 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Prepare production frontend
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          index = Path('index.html')
+          text = index.read_text(encoding='utf-8')
+          text = text.replace(
+              'content="width=device-width,initial-scale=1,viewport-fit=cover"',
+              'content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"'
+          )
+          script = '<script type="module" src="./app.js?v=031"></script>'
+          if script not in text:
+              text = text.replace('</body>', script + '</body>')
+          index.write_text(text, encoding='utf-8')
+
+          auth = Path('auth.html')
+          if auth.exists():
+              a = auth.read_text(encoding='utf-8')
+              a = a.replace(
+                  'content="width=device-width,initial-scale=1,viewport-fit=cover"',
+                  'content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"'
+              )
+              auth.write_text(a, encoding='utf-8')
+          PY
+
+      - name: Verify production wiring
+        shell: bash
+        run: |
+          grep -q 'app.js?v=031' index.html
+          grep -q 'user-scalable=no' index.html
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
           enablement: true
+
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
+
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
