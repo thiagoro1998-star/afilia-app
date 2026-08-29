@@ -1,52 +1,49 @@
-const AFILIA_VERSION='0.3.1';
-const REAUTH_MARKER='afilia_reauth_031';
+const AFILIA_VERSION='0.4.0';
 const SUPABASE_URL='https://yjgwlofhordbmjomxcdx.supabase.co';
 const SUPABASE_KEY='sb_publishable_qASwZXIwsbouYZpC-X0YWA_675aTqWN';
-
+const FUNCTIONS=SUPABASE_URL+'/functions/v1';
+const TELEGRAM='https://t.me/afiliaapp_bot';
 const {createClient}=await import('https://esm.sh/@supabase/supabase-js@2');
 const supabase=createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 window.afiliaSupabase=supabase;
-
-function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-
-async function requireSession(){
-  if(!localStorage.getItem(REAUTH_MARKER)){
-    localStorage.setItem(REAUTH_MARKER,'1');
-    try{await supabase.auth.signOut({scope:'local'})}catch(e){try{await supabase.auth.signOut()}catch(_){}}
-    location.replace('./auth.html?reauth=1');
-    return null;
-  }
-  const {data:{session}}=await supabase.auth.getSession();
-  if(!session){location.replace('./auth.html');return null}
-  return session;
-}
-
-async function openProfile(){
-  const {data:{user}}=await supabase.auth.getUser();
-  if(!user){location.replace('./auth.html');return}
-  const email=user.email||'Conta Afilia';
-  const name=user.user_metadata?.name||'';
-  if(typeof window.openModal==='function'){
-    window.openModal(`<h3>Minha conta</h3><p>${esc(name||email)}</p><div class="notice good"><strong>Conta ativa</strong><br>${esc(email)}</div><div class="notice"><strong>Afilia ${AFILIA_VERSION}</strong><br>Sua sessão está protegida e vinculada a esta conta.</div><div class="actions"><button class="btn secondary full" onclick="closeModal()">Voltar</button><button class="btn danger full" onclick="logoutAfilia()">Sair da conta</button></div>`);
-  } else if(confirm(`${name||email}\n\nDeseja sair da conta?`)) await logoutAfilia();
-}
-
-async function logoutAfilia(){
-  try{await supabase.auth.signOut({scope:'local'})}catch(e){try{await supabase.auth.signOut()}catch(_){}}
-  location.replace('./auth.html?loggedout=1');
-}
-window.openProfile=openProfile;
-window.logoutAfilia=logoutAfilia;
-
-const session=await requireSession();
-if(session){
-  const profile=document.querySelector('.profile');
-  if(profile){
-    profile.setAttribute('role','button');
-    profile.setAttribute('aria-label','Minha conta');
-    profile.setAttribute('tabindex','0');
-    profile.style.cursor='pointer';
-    profile.onclick=openProfile;
-    profile.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openProfile()}};
-  }
-}
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let currentUser=null;
+let integrationState=[];
+function toast(text){const el=$('toast');if(!el)return;el.textContent=text;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2300)}
+function showModal(html){$('modalBody').innerHTML=html;$('modal').classList.add('show')}
+function closeModal(){ $('modal').classList.remove('show') }
+window.closeModal=closeModal;
+window.openTelegram=()=>window.open(TELEGRAM,'_blank');
+function go(id){document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.id===id));document.querySelectorAll('.bottom button').forEach(x=>x.classList.toggle('active',x.dataset.go===id));history.replaceState(null,'','#'+id);if(id==='activity')loadActivity();if(id==='results')loadResults();if(id==='integrations')loadIntegrations()}
+window.go=go;
+async function session(){const{data:{session}}=await supabase.auth.getSession();if(!session){location.replace('./auth.html');return null}currentUser=session.user;return session}
+async function fn(slug,body){const s=await session();if(!s)throw Error('unauthorized');const r=await fetch(`${FUNCTIONS}/${slug}`,{method:'POST',headers:{Authorization:`Bearer ${s.access_token}`,apikey:SUPABASE_KEY,'content-type':'application/json'},body:JSON.stringify(body)});let j={};try{j=await r.json()}catch{}if(!r.ok)throw Object.assign(Error(j.error||'request_failed'),{payload:j,status:r.status});return j}
+async function loadProfile(){if(!currentUser)return;const name=currentUser.user_metadata?.name||currentUser.email?.split('@')[0]||'Usuário';$('helloName').textContent=name.split(' ')[0];$('profileName').textContent=name;$('profileEmail').textContent=currentUser.email||''}
+async function openProfile(){if(!currentUser)await session();const name=currentUser?.user_metadata?.name||currentUser?.email||'Conta Afilia';showModal(`<h3>Minha conta</h3><p>${esc(name)}</p><div class="notice good"><strong>Conta ativa</strong><br>${esc(currentUser?.email||'')}</div><div class="notice"><strong>Afilia ${AFILIA_VERSION}</strong><br>Telegram para operação. Painel web para gestão, integrações e resultados.</div><div class="actions"><button class="btn secondary full" onclick="closeModal()">Voltar</button><button class="btn danger full" onclick="logoutAfilia()">Sair da conta</button></div>`)}
+async function logoutAfilia(){await supabase.auth.signOut();location.replace('./auth.html?loggedout=1')}
+window.openProfile=openProfile;window.logoutAfilia=logoutAfilia;
+async function loadOverview(){const uid=currentUser.id;const start=new Date();start.setHours(0,0,0,0);const iso=start.toISOString();const week=new Date(Date.now()-6*864e5);week.setHours(0,0,0,0);
+const [a,b,c,d,e,f]=await Promise.all([
+ supabase.from('offers').select('*',{count:'exact',head:true}).eq('user_id',uid).gte('created_at',iso),
+ supabase.from('offers').select('*',{count:'exact',head:true}).eq('user_id',uid).eq('status','published').gte('created_at',iso),
+ supabase.from('queue_items').select('*',{count:'exact',head:true}).eq('user_id',uid).in('status',['pending','processing','ready_to_share']),
+ supabase.from('automation_rules').select('*',{count:'exact',head:true}).eq('user_id',uid).eq('is_enabled',true),
+ supabase.from('offers').select('status,conversion_status,created_at,metadata').eq('user_id',uid).gte('created_at',week.toISOString()).order('created_at',{ascending:true}),
+ supabase.from('telegram_user_links').select('telegram_user_id,username,first_name').eq('user_id',uid).maybeSingle()
+]);
+$('kpiReceived').textContent=a.count||0;$('kpiPublished').textContent=b.count||0;$('kpiQueue').textContent=c.count||0;$('kpiAutomations').textContent=d.count||0;
+const rows=e.data||[];const conv=rows.filter(x=>x.conversion_status==='converted').length;const failed=rows.filter(x=>x.status==='failed'||x.conversion_status==='failed').length;$('weekOffers').textContent=rows.length;$('weekConversion').textContent=rows.length?Math.round(conv/rows.length*100)+'%':'—';$('weekErrors').textContent=failed;
+const tg=f.data;$('telegramStatus').textContent=tg?'Conectado':'Conectar';$('telegramStatus').className='chip '+(tg?'green':'orange');$('telegramSub').textContent=tg?`@${tg.username||tg.first_name||'Telegram'} • central operacional`:'Use o Telegram para operar o Afilia';renderWeek(rows)}
+function renderWeek(rows){const days=[];for(let i=6;i>=0;i--){const d=new Date(Date.now()-i*864e5),key=d.toISOString().slice(0,10);days.push({key,label:d.toLocaleDateString('pt-BR',{weekday:'short'}).replace('.',''),n:0})}for(const r of rows){const k=new Date(r.created_at).toISOString().slice(0,10);const d=days.find(x=>x.key===k);if(d)d.n++}const max=Math.max(1,...days.map(x=>x.n));$('weekChart').innerHTML=days.map(x=>`<div class="barCol"><span>${x.n}</span><i style="height:${Math.max(5,x.n/max*100)}%"></i><small>${x.label}</small></div>`).join('')}
+async function loadResults(){const uid=currentUser.id;const since=new Date(Date.now()-30*864e5).toISOString();const{data=[]}=await supabase.from('offers').select('status,conversion_status,created_at,metadata').eq('user_id',uid).gte('created_at',since);const total=data.length,pub=data.filter(x=>x.status==='published').length,conv=data.filter(x=>x.conversion_status==='converted').length,fail=data.filter(x=>x.status==='failed'||x.conversion_status==='failed').length;$('rTotal').textContent=total;$('rPublished').textContent=pub;$('rConverted').textContent=conv;$('rFailed').textContent=fail;const map={};for(const x of data){const k=x.metadata?.marketplace_slug||'outros';map[k]=(map[k]||0)+1}const sum=Math.max(1,total);$('marketBreakdown').innerHTML=Object.keys(map).length?Object.entries(map).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<div class="metricRow"><div><b>${esc(k)}</b><span>${n} ofertas</span></div><div class="meter"><i style="width:${n/sum*100}%"></i></div></div>`).join(''):'<div class="emptySmall">Os resultados começam a aparecer conforme você usa o bot.</div>'}
+async function loadActivity(){const uid=currentUser.id;const{data=[]}=await supabase.from('offers').select('id,status,conversion_status,created_at,source_url,metadata').eq('user_id',uid).order('created_at',{ascending:false}).limit(30);$('activityList').innerHTML=data.length?data.map(x=>{const mk=x.metadata?.marketplace_slug||'link';const icon=x.status==='failed'?'🔴':x.status==='published'?'🟢':'🟡';return `<div class="activityItem"><div class="activityIcon">${icon}</div><div><b>${esc(mk)}</b><span>${esc(x.status)} • ${esc(x.conversion_status)}</span><small>${new Date(x.created_at).toLocaleString('pt-BR')}</small></div></div>`}).join(''):'<div class="emptySmall">Nenhuma atividade ainda. Envie um link para o bot do Telegram.</div>'}
+async function loadIntegrations(){try{const j=await fn('integration-vault',{action:'status',marketplace:'shopee'});integrationState=j.integrations||[]}catch{integrationState=[]}const get=slug=>integrationState.find(x=>x.marketplaces?.slug===slug);for(const slug of ['shopee','amazon','mercadolivre','magalu']){const x=get(slug),el=$('st_'+slug);if(!el)continue;el.textContent=x?.credentials_configured?'Conectado':(slug==='mercadolivre'||slug==='magalu'?'Modo link':'Conectar');el.className='chip '+(x?.credentials_configured?'green':(slug==='mercadolivre'||slug==='magalu'?'':'orange'))}}
+async function connectTelegram(){try{const j=await fn('telegram-connect',{});if(j.linked){toast('Telegram já conectado');window.open(TELEGRAM,'_blank')}else if(j.url)location.href=j.url}catch{toast('Não foi possível iniciar a conexão agora')}}
+window.connectTelegram=connectTelegram;
+function openIntegration(slug){const names={shopee:'Shopee',amazon:'Amazon',mercadolivre:'Mercado Livre',magalu:'Magalu'};if(slug==='mercadolivre'||slug==='magalu'){showModal(`<h3>${names[slug]}</h3><p>Por enquanto o Afilia trabalha com links de afiliado dessa plataforma. Quando a API oficial estiver disponível para esta integração, você poderá ativá-la aqui.</p><div class="notice"><strong>Não informe senha da sua conta.</strong><br>O Afilia nunca precisa da senha do marketplace.</div><button class="btn secondary full" onclick="closeModal()">Entendi</button>`);return}if(slug==='shopee')showModal(`<h3>Conectar Shopee</h3><p>Use somente as credenciais da <b>Affiliate Open API</b>. Se sua conta ainda não tem acesso, solicite à Shopee e continue usando o Afilia normalmente.</p><label>APP ID</label><input class="field" id="intPublic" placeholder="App ID"><label>SECRET</label><input class="field" id="intSecret" type="password" placeholder="Secret"><div class="notice warn"><strong>Nunca coloque sua senha da Shopee aqui.</strong><br>App ID e Secret aparecem na área Open API quando o acesso é liberado.</div><div class="actions"><button class="btn secondary full" onclick="closeModal()">Cancelar</button><button class="btn primary full" onclick="saveIntegration('shopee')">Salvar com segurança</button></div>`);else showModal(`<h3>Conectar Amazon</h3><p>Conecte os dados oficiais da sua integração de afiliados.</p><label>PARTNER TAG</label><input class="field" id="intTag" placeholder="seutag-20"><label>CLIENT ID</label><input class="field" id="intPublic" placeholder="Client ID"><label>CLIENT SECRET</label><input class="field" id="intSecret" type="password" placeholder="Client Secret"><div class="notice good"><strong>Credenciais protegidas.</strong><br>Segredos são enviados ao cofre no backend e não ficam salvos neste navegador.</div><div class="actions"><button class="btn secondary full" onclick="closeModal()">Cancelar</button><button class="btn primary full" onclick="saveIntegration('amazon')">Salvar com segurança</button></div>`)}
+window.openIntegration=openIntegration;
+async function saveIntegration(slug){try{let body={action:'save',marketplace:slug,publicData:{},secrets:{}};if(slug==='shopee'){body.publicData.appId=$('intPublic').value.trim();body.secrets.appSecret=$('intSecret').value.trim()}else{body.publicData.partnerTag=$('intTag').value.trim();body.publicData.clientId=$('intPublic').value.trim();body.secrets.clientSecret=$('intSecret').value.trim()}if(Object.values(body.publicData).some(x=>!x)||Object.values(body.secrets).some(x=>!x)){toast('Preencha todos os campos');return}await fn('integration-vault',body);closeModal();toast('Credenciais salvas com segurança');await loadIntegrations()}catch(e){toast(e.payload?.error==='missing_credentials'?'Confira os campos':'Não foi possível salvar agora')}}
+window.saveIntegration=saveIntegration;
+async function init(){const s=await session();if(!s)return;currentUser=s.user;await loadProfile();const hash=location.hash.replace('#','');go(['results','integrations','activity'].includes(hash)?hash:'home');await Promise.allSettled([loadOverview(),loadIntegrations()]);document.querySelector('.profile')?.addEventListener('click',openProfile)}
+init();
