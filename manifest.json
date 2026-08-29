@@ -1,7 +1,7 @@
 {
   "name": "Afilia",
   "short_name": "Afilia",
-  "start_url": "./",
+  "start_url": "./auth.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#090b0e",
