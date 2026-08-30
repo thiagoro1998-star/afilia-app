@@ -29,35 +29,21 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          auth = Path('auth.html')
-          if auth.exists():
-              a = auth.read_text(encoding='utf-8')
-              a = a.replace(
-                  'content="width=device-width,initial-scale=1,viewport-fit=cover"',
-                  'content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"'
-              )
-              strength_script = r'''<script>
-              (()=>{
-                const common=new Set(['1234567890','password','password123','senha123456','qwerty12345','admin123456','iloveyou123','1111111111']);
-                const p=document.getElementById('password'),go=document.getElementById('go'),signup=document.getElementById('signupTab');
-                if(!p||!go||!signup||document.getElementById('pwStrength'))return;
-                const wrap=document.createElement('div');wrap.id='pwStrength';wrap.style.cssText='display:none;margin-top:9px';wrap.innerHTML='<div style="height:7px;border-radius:999px;background:#20262d;overflow:hidden"><div id="pwBar" style="height:100%;width:0;background:#ff8b8b;transition:.2s"></div></div><div id="pwText" style="margin-top:6px;color:#8c97a6;font-size:11px">Use pelo menos 10 caracteres.</div>';p.parentElement.after(wrap);
-                const strong=v=>{if(common.has((v||'').toLowerCase()))return false;const classes=[/[a-z]/,/[A-Z]/,/\d/,/[^A-Za-z0-9]/].filter(r=>r.test(v)).length;return(v.length>=10&&classes>=3)||(v.length>=14&&classes>=2)};
-                const update=()=>{const on=signup.classList.contains('on');wrap.style.display=on?'block':'none';if(!on)return;const v=p.value;let s=0;if(v.length>=10)s++;if(v.length>=14)s++;if(/[a-z]/.test(v)&&/[A-Z]/.test(v))s++;if(/\d/.test(v))s++;if(/[^A-Za-z0-9]/.test(v))s++;s=Math.min(4,s);const labels=['Muito fraca','Fraca','Razoável','Boa','Forte'],colors=['#ff6d6d','#ff8b8b','#ffb476','#d4ff32','#45df8e'];document.getElementById('pwBar').style.cssText+=`;width:${['8%','25%','50%','75%','100%'][s]};background:${colors[s]}`;document.getElementById('pwText').textContent=labels[s]+' • prefira uma senha única'};
-                p.addEventListener('input',update);signup.addEventListener('click',()=>setTimeout(update,0));document.getElementById('loginTab')?.addEventListener('click',()=>setTimeout(update,0));go.addEventListener('click',e=>{if(signup.classList.contains('on')&&!strong(p.value)){e.preventDefault();e.stopImmediatePropagation();const st=document.getElementById('status');st.textContent='Crie uma senha mais forte: 10+ caracteres e misture letras, números e símbolo.';st.className='status show err'}},true);
-              })();
-              </script>'''
-              a=a.replace('</body>',strength_script+'</body>')
-              auth.write_text(a,encoding='utf-8')
+          index = Path('index.html')
+          text = index.read_text(encoding='utf-8')
+          text = text.replace('app.js?v=040', 'app.js?v=050')
+          text = text.replace('Afilia 0.4 •', 'Afilia 0.5 •')
+          index.write_text(text, encoding='utf-8')
           PY
 
       - name: Verify production wiring
         shell: bash
         run: |
-          grep -q 'app.js?v=040' index.html
+          grep -q 'app.js?v=050' index.html
           grep -q 'user-scalable=no' index.html
           grep -q 'Telegram para operação' index.html
-          grep -q 'pwStrength' auth.html
+          grep -q 'data-target="password"' auth.html
+          grep -q "afilia-v10" sw.js
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
