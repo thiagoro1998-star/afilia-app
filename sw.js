@@ -1,38 +1,5 @@
-const CACHE='afilia-v10';
-const CORE=['./','./index.html','./auth.html','./app.js','./manifest.json','./icon.svg'];
-
-self.addEventListener('install',event=>{
-  self.skipWaiting();
-  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)).catch(()=>{}));
-});
-
-self.addEventListener('activate',event=>{
-  event.waitUntil(Promise.all([
-    self.clients.claim(),
-    caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))
-  ]));
-});
-
-self.addEventListener('fetch',event=>{
-  const req=event.request;
-  if(req.method!=='GET')return;
-  const url=new URL(req.url);
-  if(url.origin!==self.location.origin)return;
-
-  if(req.mode==='navigate'){
-    event.respondWith(
-      fetch(req,{cache:'no-store'})
-        .catch(()=>caches.match(req))
-        .then(resp=>resp||caches.match('./index.html'))
-    );
-    return;
-  }
-
-  event.respondWith(
-    fetch(req,{cache:'no-store'}).then(resp=>{
-      const copy=resp.clone();
-      caches.open(CACHE).then(cache=>cache.put(req,copy)).catch(()=>{});
-      return resp;
-    }).catch(()=>caches.match(req))
-  );
-});
+const CACHE='afilia-v11';
+const CORE=['./','./index.html','./auth.html','./app.js','./templates.js','./whatsapp.js','./manifest.json','./icon.svg'];
+self.addEventListener('install',event=>{self.skipWaiting();event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)).catch(()=>{}));});
+self.addEventListener('activate',event=>{event.waitUntil(Promise.all([self.clients.claim(),caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))]));});
+self.addEventListener('fetch',event=>{const req=event.request;if(req.method!=='GET')return;const url=new URL(req.url);if(url.origin!==self.location.origin)return;if(req.mode==='navigate'){event.respondWith(fetch(req,{cache:'no-store'}).catch(()=>caches.match(req)));return}event.respondWith(fetch(req,{cache:'no-store'}).then(resp=>{const copy=resp.clone();caches.open(CACHE).then(cache=>cache.put(req,copy)).catch(()=>{});return resp}).catch(()=>caches.match(req)));});
