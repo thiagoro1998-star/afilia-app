@@ -1,0 +1,11 @@
+{
+  "name":"afilia-whatsapp-worker",
+  "private":true,
+  "type":"module",
+  "scripts":{"start":"node index.js"},
+  "dependencies":{
+    "@supabase/supabase-js":"^2.57.0",
+    "@whiskeysockets/baileys":"^6.7.19",
+    "pino":"^9.9.0"
+  }
+}
