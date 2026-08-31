@@ -35,6 +35,8 @@ jobs:
           text = text.replace('Afilia 0.4 •', 'Afilia 0.5 •')
           if 'templates.js?v=051' not in text:
               text = text.replace('</body>', '<script type="module" src="./templates.js?v=051"></script>\n</body>')
+          if 'whatsapp.js?v=052' not in text:
+              text = text.replace('</body>', '<script type="module" src="./whatsapp.js?v=052"></script>\n</body>')
           index.write_text(text, encoding='utf-8')
           PY
 
@@ -43,11 +45,13 @@ jobs:
         run: |
           grep -q 'app.js?v=050' index.html
           grep -q 'templates.js?v=051' index.html
+          grep -q 'whatsapp.js?v=052' index.html
           grep -q 'user-scalable=no' index.html
           grep -q 'Telegram para operação' index.html
           grep -q 'data-target="password"' auth.html
           grep -q "afilia-v10" sw.js
           grep -q 'openTemplatesManager' templates.js
+          grep -q 'openWhatsAppManager' whatsapp.js
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
