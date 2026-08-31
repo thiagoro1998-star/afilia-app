@@ -39,6 +39,8 @@ jobs:
               text = text.replace('<script type="module" src="./whatsapp.js?v=052"></script>', '<script type="module" src="./whatsapp.js?v=053"></script>')
               if 'whatsapp.js?v=053' not in text:
                   text = text.replace('</body>', '<script type="module" src="./whatsapp.js?v=053"></script>\n</body>')
+          if 'whatsapp-gateway-client.js?v=060' not in text:
+              text = text.replace('</body>', '<script type="module" src="./whatsapp-gateway-client.js?v=060"></script>\n</body>')
           index.write_text(text, encoding='utf-8')
           PY
 
@@ -48,12 +50,14 @@ jobs:
           grep -q 'app.js?v=050' index.html
           grep -q 'templates.js?v=051' index.html
           grep -q 'whatsapp.js?v=053' index.html
+          grep -q 'whatsapp-gateway-client.js?v=060' index.html
           grep -q 'user-scalable=no' index.html
           grep -q 'Telegram para operação' index.html
           grep -q 'data-target="password"' auth.html
-          grep -q "afilia-v11" sw.js
+          grep -q "afilia-v12" sw.js
           grep -q 'openTemplatesManager' templates.js
           grep -q 'openWhatsAppManager' whatsapp.js
+          grep -q 'AFILIA_WA_GATEWAY' whatsapp-gateway-client.js
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
