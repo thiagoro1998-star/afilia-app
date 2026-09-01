@@ -35,10 +35,10 @@ jobs:
           text = text.replace('Afilia 0.4 •', 'Afilia 0.5 •')
           if 'templates.js?v=051' not in text:
               text = text.replace('</body>', '<script type="module" src="./templates.js?v=051"></script>\n</body>')
-          for old in ['whatsapp.js?v=052','whatsapp.js?v=053','whatsapp.js?v=054']:
-              text = text.replace(old,'whatsapp.js?v=055')
-          if 'whatsapp.js?v=055' not in text:
-              text = text.replace('</body>', '<script type="module" src="./whatsapp.js?v=055"></script>\n</body>')
+          for old in ['whatsapp.js?v=052','whatsapp.js?v=053','whatsapp.js?v=054','whatsapp.js?v=055']:
+              text = text.replace(old,'whatsapp.js?v=056')
+          if 'whatsapp.js?v=056' not in text:
+              text = text.replace('</body>', '<script type="module" src="./whatsapp.js?v=056"></script>\n</body>')
           text = text.replace('whatsapp-gateway-client.js?v=060','whatsapp-gateway-client.js?v=061')
           if 'whatsapp-gateway-client.js?v=061' not in text:
               text = text.replace('</body>', '<script type="module" src="./whatsapp-gateway-client.js?v=061"></script>\n</body>')
@@ -50,7 +50,7 @@ jobs:
         run: |
           grep -q 'app.js?v=050' index.html
           grep -q 'templates.js?v=051' index.html
-          grep -q 'whatsapp.js?v=055' index.html
+          grep -q 'whatsapp.js?v=056' index.html
           grep -q 'whatsapp-gateway-client.js?v=061' index.html
           grep -q 'user-scalable=no' index.html
           grep -q 'Telegram para operação' index.html
