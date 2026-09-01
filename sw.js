@@ -1,4 +1,4 @@
-const CACHE='afilia-v16';
+const CACHE='afilia-v15';
 const CORE=['./','./index.html','./auth.html','./app.js','./templates.js','./whatsapp.js','./whatsapp-gateway-client.js','./manifest.json','./icon.svg'];
 self.addEventListener('install',event=>{self.skipWaiting();event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)).catch(()=>{}));});
 self.addEventListener('activate',event=>{event.waitUntil(Promise.all([self.clients.claim(),caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))]));});
