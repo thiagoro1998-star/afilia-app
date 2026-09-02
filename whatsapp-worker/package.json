@@ -1,11 +1,11 @@
 {
   "name": "afilia-whatsapp-worker",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "private": true,
   "type": "module",
   "engines": { "node": ">=20 <23" },
   "scripts": {
-    "start": "node worker-v5.js"
+    "start": "node supervisor.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.57.0",
