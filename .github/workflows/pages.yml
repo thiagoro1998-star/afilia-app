@@ -43,6 +43,8 @@ jobs:
               text = text.replace(old,'whatsapp-gateway-client.js?v=062')
           if 'whatsapp-gateway-client.js?v=062' not in text:
               text = text.replace('</body>', '<script type="module" src="./whatsapp-gateway-client.js?v=062"></script>\n</body>')
+          if 'account-session.js?v=001' not in text:
+              text = text.replace('</body>', '<script type="module" src="./account-session.js?v=001"></script>\n</body>')
           index.write_text(text, encoding='utf-8')
           PY
 
@@ -53,6 +55,7 @@ jobs:
           grep -q 'templates.js?v=051' index.html
           grep -q 'whatsapp.js?v=056' index.html
           grep -q 'whatsapp-gateway-client.js?v=062' index.html
+          grep -q 'account-session.js?v=001' index.html
           grep -q 'user-scalable=no' index.html
           grep -q 'Telegram para operação' index.html
           grep -q 'data-target="password"' auth.html
@@ -61,6 +64,8 @@ jobs:
           grep -q 'openWhatsAppManager' whatsapp.js
           grep -q 'syncWhatsAppGroups' whatsapp.js
           grep -q "AFILIA_WA_GATEWAY='railway-persistent'" whatsapp-gateway-client.js
+          grep -q 'logoutAfiliaIsolated' account-session.js
+          grep -q 'disconnectWhatsAppAccount' account-session.js
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
