@@ -20,7 +20,7 @@ function collect(node,out=new Set()){if(!node||typeof node!=='object')return out
 async function saveGroup(conn,user,jid,subject,source){const name=String(subject||'').trim();if(!name)return false;const{data:old}=await db.from('whatsapp_group_refs').select('id,is_enabled').eq('connection_id',conn).eq('external_group_ref',jid).maybeSingle();const patch={display_name:name,name_status:'verified',name_source:source,name_verified_at:now(),last_name_error:null,updated_at:now()};if(old){const{error}=await db.from('whatsapp_group_refs').update(patch).eq('id',old.id);if(error)throw error}else{const{error}=await db.from('whatsapp_group_refs').insert({user_id:user,connection_id:conn,external_group_ref:jid,display_name:name,role:'destination',is_enabled:false,name_status:'verified',name_source:source,name_verified_at:now(),last_name_error:null});if(error)throw error}return true}
 async function audit(user,conn,meta){try{await db.from('audit_events').insert({user_id:user,event_type:'whatsapp.active_group_discovery',entity_type:'whatsapp_connection',entity_id:conn,redacted_metadata:{...meta,at:now()}})}catch{}}
 
-const{data:rows,error}=await db.from('whatsapp_connections').select('id,user_id,status,session_secret_configured').eq('status','connected').eq('session_secret_configured',true);
+const{data:rows,error}=await db.from('whatsapp_connections').select('id,user_id,status,session_secret_configured').in('status',['connected','degraded']).eq('session_secret_configured',true);
 if(error)throw error;
 for(const row of rows||[]){
   const{count}=await db.from('whatsapp_group_refs').select('*',{count:'exact',head:true}).eq('connection_id',row.id);
@@ -33,11 +33,12 @@ for(const row of rows||[]){
     sock.ev.on('connection.update',u=>{if(u.connection==='open')opened=true;if(u.connection==='close')closedCode=Number(u.lastDisconnect?.error?.output?.statusCode||u.lastDisconnect?.error?.statusCode||0)});
     for(let i=0;i<40&&!opened&&!closedCode;i++)await wait(500);
     if(!opened)throw Error('socket_not_open_'+closedCode);
+    await db.from('whatsapp_connections').update({status:'connected',last_heartbeat_at:now(),updated_at:now()}).eq('id',row.id);
     const candidates=new Set();let officialCount=0,rawCount=0,officialError=null,rawError=null;
     try{const groups=await sock.groupFetchAllParticipating();for(const [jid,m] of Object.entries(groups||{})){const j=jidFrom(jid)||jidFrom(m?.id);if(j){candidates.add(j);if(m?.subject)await saveGroup(row.id,row.user_id,j,m.subject,'groupFetchAllParticipating')}}officialCount=Object.keys(groups||{}).length}catch(e){officialError=String(e?.message||e)}
-    if(!closedCode){try{const raw=await sock.query({tag:'iq',attrs:{to:'@g.us',xmlns:'w:g2',type:'get'},content:[{tag:'participating',attrs:{},content:[{tag:'participants',attrs:{}},{tag:'description',attrs:{}}]}]});for(const j of collect(raw))candidates.add(j);rawCount=collect(raw).size}catch(e){rawError=String(e?.message||e)}}
+    if(!closedCode){try{const raw=await sock.query({tag:'iq',attrs:{to:'@g.us',xmlns:'w:g2',type:'get'},content:[{tag:'participating',attrs:{},content:[{tag:'participants',attrs:{}},{tag:'description',attrs:{}}]}]});const rawSet=collect(raw);for(const j of rawSet)candidates.add(j);rawCount=rawSet.size}catch(e){rawError=String(e?.message||e)}}
     let verified=0,failed=0;
-    for(const jid of candidates){try{const meta=await sock.groupMetadata(jid);if(await saveGroup(row.id,row.user_id,jid,meta?.subject,'groupMetadata_active'))verified++;else failed++}catch(e){failed++;await db.from('audit_events').insert({user_id:row.user_id,event_type:'whatsapp.group_name_probe',entity_type:'whatsapp_connection',entity_id:row.id,redacted_metadata:{jid,status:'failed',error:String(e?.message||e).slice(0,180),at:now()}}).catch(()=>{});}await wait(350)}
+    for(const jid of candidates){try{const meta=await sock.groupMetadata(jid);if(await saveGroup(row.id,row.user_id,jid,meta?.subject,'groupMetadata_active'))verified++;else failed++}catch(e){failed++;try{await db.from('audit_events').insert({user_id:row.user_id,event_type:'whatsapp.group_name_probe',entity_type:'whatsapp_connection',entity_id:row.id,redacted_metadata:{jid,status:'failed',error:String(e?.message||e).slice(0,180),at:now()}})}catch{}}await wait(350)}
     await audit(row.user_id,row.id,{official_count:officialCount,raw_count:rawCount,candidates:candidates.size,verified,failed,official_error:officialError,raw_error:rawError,closed_code:closedCode});
     log.info({connectionId:row.id,officialCount,rawCount,candidates:candidates.size,verified,failed,closedCode},'active discovery complete');
     try{sock.end(undefined)}catch{}
