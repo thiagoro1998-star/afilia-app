@@ -1,6 +1,6 @@
 {
   "name": "afilia-whatsapp-worker",
-  "version": "1.4.5",
+  "version": "1.4.6",
   "private": true,
   "type": "module",
   "engines": { "node": ">=20 <23" },
@@ -10,6 +10,7 @@
   "dependencies": {
     "@supabase/supabase-js": "2.57.0",
     "@whiskeysockets/baileys": "7.0.0-rc14",
-    "pino": "9.9.0"
+    "pino": "9.9.0",
+    "sharp": "0.33.5"
   }
 }
