@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 
 const specs = [
-  { name: 'whatsapp-historical-recovery', file: 'historical-group-recovery.js' },
+  { name: 'whatsapp-main', file: 'worker-v5.js' },
   { name: 'shopee', file: 'shopee-resolver.js' }
 ];
 const children = new Map();
@@ -29,7 +29,7 @@ function stop(code = 0) {
   ending = true;
   for (const timer of restartTimers.values()) clearTimeout(timer);
   for (const child of children.values()) { try { child.kill('SIGTERM'); } catch {} }
-  setTimeout(() => process.exit(code), 800).unref();
+  setTimeout(() => process.exit(code), 1200).unref();
 }
 
 for (const spec of specs) start(spec);
