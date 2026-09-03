@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 
 const specs = [
-  { name: 'whatsapp-appstate-probe', file: 'appstate-group-probe.js' },
+  { name: 'whatsapp-historical-recovery', file: 'historical-group-recovery.js' },
   { name: 'shopee', file: 'shopee-resolver.js' }
 ];
 const children = new Map();
@@ -14,7 +14,7 @@ function start(spec) {
   children.set(spec.name, child);
   console.log(`[supervisor] started ${spec.name} pid=${child.pid}`);
   child.on('exit', (code, signal) => {
-    children.delete(spec.name);
+    children.delete(spec.name, child);
     if (ending) return;
     console.error(`[supervisor] ${spec.name} exited code=${code} signal=${signal}; restarting in 2s`);
     clearTimeout(restartTimers.get(spec.name));
