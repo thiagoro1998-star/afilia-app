@@ -43,10 +43,10 @@ jobs:
               text = text.replace(old,'whatsapp.js?v=056')
           if 'whatsapp.js?v=056' not in text:
               text = text.replace('</body>', '<script type="module" src="./whatsapp.js?v=056"></script>\n</body>')
-          for old in ['whatsapp-gateway-client.js?v=060','whatsapp-gateway-client.js?v=061']:
-              text = text.replace(old,'whatsapp-gateway-client.js?v=062')
-          if 'whatsapp-gateway-client.js?v=062' not in text:
-              text = text.replace('</body>', '<script type="module" src="./whatsapp-gateway-client.js?v=062"></script>\n</body>')
+          for old in ['whatsapp-gateway-client.js?v=060','whatsapp-gateway-client.js?v=061','whatsapp-gateway-client.js?v=062']:
+              text = text.replace(old,'whatsapp-gateway-client.js?v=063')
+          if 'whatsapp-gateway-client.js?v=063' not in text:
+              text = text.replace('</body>', '<script type="module" src="./whatsapp-gateway-client.js?v=063"></script>\n</body>')
           text = text.replace('account-session.js?v=001','account-session.js?v=002')
           if 'account-session.js?v=002' not in text:
               text = text.replace('</body>', '<script type="module" src="./account-session.js?v=002"></script>\n</body>')
@@ -59,7 +59,7 @@ jobs:
           grep -q 'app.js?v=050' index.html
           grep -q 'templates.js?v=051' index.html
           grep -q 'whatsapp.js?v=056' index.html
-          grep -q 'whatsapp-gateway-client.js?v=062' index.html
+          grep -q 'whatsapp-gateway-client.js?v=063' index.html
           grep -q 'account-session.js?v=002' index.html
           grep -q 'id="profileName" hidden' index.html
           grep -q 'id="profileEmail" hidden' index.html
@@ -71,6 +71,7 @@ jobs:
           grep -q 'openWhatsAppManager' whatsapp.js
           grep -q 'syncWhatsAppGroups' whatsapp.js
           grep -q "AFILIA_WA_GATEWAY='railway-persistent'" whatsapp-gateway-client.js
+          grep -q 'toggleWhatsGroup' whatsapp-gateway-client.js
           grep -q 'logoutAfiliaIsolated' account-session.js
           grep -q 'permanecerão salvos nesta conta' account-session.js
 
