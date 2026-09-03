@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 
 const specs = [
-  { name: 'whatsapp-main', file: 'worker-v6.js' },
+  { name: 'whatsapp-main', file: 'worker-v5.js' },
   { name: 'shopee', file: 'shopee-resolver.js' }
 ];
 const children = new Map();
