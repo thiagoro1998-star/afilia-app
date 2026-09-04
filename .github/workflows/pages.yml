@@ -39,6 +39,8 @@ jobs:
               text = text.replace('<body>', '<body>\n<span id="profileName" hidden></span><span id="profileEmail" hidden></span>')
           if 'templates.js?v=051' not in text:
               text = text.replace('</body>', '<script type="module" src="./templates.js?v=051"></script>\n</body>')
+          if 'offer-mode.js?v=001' not in text:
+              text = text.replace('</body>', '<script type="module" src="./offer-mode.js?v=001"></script>\n</body>')
           for old in ['whatsapp.js?v=052','whatsapp.js?v=053','whatsapp.js?v=054','whatsapp.js?v=055']:
               text = text.replace(old,'whatsapp.js?v=056')
           if 'whatsapp.js?v=056' not in text:
@@ -58,6 +60,7 @@ jobs:
         run: |
           grep -q 'app.js?v=050' index.html
           grep -q 'templates.js?v=051' index.html
+          grep -q 'offer-mode.js?v=001' index.html
           grep -q 'whatsapp.js?v=056' index.html
           grep -q 'whatsapp-gateway-client.js?v=063' index.html
           grep -q 'account-session.js?v=002' index.html
@@ -68,6 +71,8 @@ jobs:
           grep -q 'data-target="password"' auth.html
           grep -q "afilia-v15" sw.js
           grep -q 'openTemplatesManager' templates.js
+          grep -q 'setOfferMode' offer-mode.js
+          grep -q 'ter API configurada não muda este modo automaticamente' offer-mode.js
           grep -q 'openWhatsAppManager' whatsapp.js
           grep -q 'syncWhatsAppGroups' whatsapp.js
           grep -q "AFILIA_WA_GATEWAY='railway-persistent'" whatsapp-gateway-client.js
