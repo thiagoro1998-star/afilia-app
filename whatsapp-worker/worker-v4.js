@@ -360,6 +360,25 @@ async function restoreConnections() {
   }
 }
 
+async function downloadOfferImage(url) {
+  const response = await fetch(url, {
+    redirect: 'follow',
+    headers: {
+      'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0 Safari/537.36',
+      'accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+      'referer': 'https://shopee.com.br/'
+    },
+    signal: AbortSignal.timeout(15000)
+  });
+  if (!response.ok) throw new Error(`image_http_${response.status}`);
+  const contentType = String(response.headers.get('content-type') || 'image/jpeg').split(';')[0].trim();
+  if (!contentType.startsWith('image/')) throw new Error(`image_invalid_content_type_${contentType}`);
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (!bytes.length) throw new Error('image_empty');
+  if (bytes.length > 12 * 1024 * 1024) throw new Error('image_too_large');
+  return { bytes, contentType };
+}
+
 async function processJobs() {
   const { data: jobs = [], error } = await db.from('whatsapp_outbound_jobs')
     .select('id,user_id,connection_id,group_ref_id,offer_id,message_text,attempts,whatsapp_group_refs(external_group_ref,display_name)')
@@ -376,10 +395,31 @@ async function processJobs() {
       .eq('id',job.id).eq('status','queued').select('id').maybeSingle();
     if (!lock) continue;
     try {
-      const sent = await session.sock.sendMessage(jid, { text: job.message_text });
+      let imageUrl = null;
+      if (job.offer_id) {
+        const { data: offer, error: offerError } = await db.from('offers')
+          .select('image_url').eq('id', job.offer_id).eq('user_id', job.user_id).maybeSingle();
+        if (offerError) throw offerError;
+        imageUrl = offer?.image_url || null;
+      }
+
+      let sent;
+      let mediaMode = 'text';
+      if (imageUrl) {
+        const image = await downloadOfferImage(imageUrl);
+        sent = await session.sock.sendMessage(jid, {
+          image: image.bytes,
+          caption: job.message_text,
+          mimetype: image.contentType
+        });
+        mediaMode = 'image';
+      } else {
+        sent = await session.sock.sendMessage(jid, { text: job.message_text });
+      }
+
       await db.from('whatsapp_outbound_jobs').update({ status:'sent', sent_at:now(), external_message_id:sent?.key?.id||null, updated_at:now(), last_error:null }).eq('id',job.id);
       if (job.offer_id) await db.from('offers').update({ status:'published', published_at:now(), updated_at:now() }).eq('id',job.offer_id).eq('user_id',job.user_id);
-      await db.from('audit_events').insert({ user_id:job.user_id, event_type:'offer.sent.whatsapp', entity_type:'offer', entity_id:job.offer_id, redacted_metadata:{group_ref_id:job.group_ref_id,message_id:sent?.key?.id||null} });
+      await db.from('audit_events').insert({ user_id:job.user_id, event_type:'offer.sent.whatsapp', entity_type:'offer', entity_id:job.offer_id, redacted_metadata:{group_ref_id:job.group_ref_id,message_id:sent?.key?.id||null,media_mode:mediaMode} });
     } catch (err) {
       const msg = String(err?.message || err).slice(0,500);
       await db.from('whatsapp_outbound_jobs').update({ status:attempts>=3?'failed':'queued', last_error:msg, updated_at:now() }).eq('id',job.id);
@@ -395,7 +435,7 @@ createServer((req,res)=>{
   if(req.url==='/'||req.url==='/health'){
     const open=[...sessions.values()].filter(s=>s.open).length;
     const pairing=[...sessions.values()].filter(s=>s.mode==='pair'&&!s.open).length;
-    res.writeHead(200);res.end(JSON.stringify({ok:true,service:'afilia-whatsapp-worker-v4.1',open,pairing,sessions:sessions.size,at:now()}));return;
+    res.writeHead(200);res.end(JSON.stringify({ok:true,service:'afilia-whatsapp-worker-v4.2-image',open,pairing,sessions:sessions.size,at:now()}));return;
   }
   res.writeHead(404);res.end('{}');
 }).listen(PORT,'0.0.0.0',()=>log.info({port:PORT},'health server listening'));
@@ -403,7 +443,7 @@ process.on('SIGTERM',()=>{stopping=true;process.exit(0)});
 process.on('SIGINT',()=>{stopping=true;process.exit(0)});
 
 await assertPrivileged();
-log.info('Afilia persistent WhatsApp gateway v4.1 started');
+log.info('Afilia persistent WhatsApp gateway v4.2 image started');
 for(;;){
   try{await recoverPairRequests();await pairWatchdog();await restoreConnections();await processJobs();await heartbeat()}catch(err){log.error({err:String(err)},'worker loop failed')}
   if(stopping)break;
