@@ -1,6 +1,6 @@
 {
   "name": "afilia-whatsapp-worker",
-  "version": "1.4.9",
+  "version": "1.4.10",
   "private": true,
   "type": "module",
   "engines": { "node": ">=20 <23" },
