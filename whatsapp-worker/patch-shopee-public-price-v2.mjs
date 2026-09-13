@@ -21,25 +21,15 @@ if(!src.includes('async function publicProductPriceV2(')){
 }
 function publicProductFields(j){
   const d=publicProductNode(j);
-  const price=normalizeShopeePublicPrice(
-    d?.price_min??d?.price??d?.priceMin??d?.price_info?.current_price??d?.price_info?.price??d?.models?.[0]?.price
-  );
-  const previous=normalizeShopeePublicPrice(
-    d?.price_min_before_discount??d?.price_before_discount??d?.priceBeforeDiscount??d?.price_info?.original_price??d?.models?.[0]?.price_before_discount
-  );
+  const price=normalizeShopeePublicPrice(d?.price_min??d?.price??d?.priceMin??d?.price_info?.current_price??d?.price_info?.price??d?.models?.[0]?.price);
+  const previous=normalizeShopeePublicPrice(d?.price_min_before_discount??d?.price_before_discount??d?.priceBeforeDiscount??d?.price_info?.original_price??d?.models?.[0]?.price_before_discount);
   const title=cleanProductTitle(d?.name||d?.product_name||d?.title||'');
   const imageUrl=publicProductImage(d?.image||d?.images?.[0]||d?.image_url||d?.imageUrl||'');
   return{title,imageUrl,price,previous};
 }
 async function publicProductPriceV2(shopId,itemId,canonical){
   if(!shopId||!itemId)return{title:'',imageUrl:null,price:null,previous:null};
-  const headers={
-    'user-agent':UAS[0],
-    'accept-language':'pt-BR,pt;q=0.9,en;q=0.7',
-    accept:'application/json,text/plain,*/*',
-    referer:canonical,
-    'x-api-source':'pc'
-  };
+  const headers={'user-agent':UAS[0],'accept-language':'pt-BR,pt;q=0.9,en;q=0.7',accept:'application/json,text/plain,*/*',referer:canonical,'x-api-source':'pc'};
   const attempts=[
     async()=>fetch('https://shopee.com.br/api/v4/item/get?itemid='+encodeURIComponent(itemId)+'&shopid='+encodeURIComponent(shopId),{headers,signal:AbortSignal.timeout(12000)}),
     async()=>fetch('https://shopee.com.br/api/v4/item/get_list',{method:'POST',headers:{...headers,'content-type':'application/json'},body:JSON.stringify({bff_meta:null,shop_item_ids:[{item_id:Number(itemId),shop_id:Number(shopId)}],source:'microsite_individual_product'}),signal:AbortSignal.timeout(12000)}),
@@ -50,13 +40,29 @@ async function publicProductPriceV2(shopId,itemId,canonical){
     try{
       const r=await make();
       if(!r.ok)continue;
-      const j=await r.json();
-      const f=publicProductFields(j);
+      const f=publicProductFields(await r.json());
       if(!best.title&&f.title)best.title=f.title;
       if(!best.imageUrl&&f.imageUrl)best.imageUrl=f.imageUrl;
       if(best.price===null&&Number.isFinite(f.price)&&f.price>0)best.price=f.price;
       if(best.previous===null&&Number.isFinite(f.previous)&&f.previous>0)best.previous=f.previous;
       if(best.price!==null)break;
+    }catch{}
+  }
+  if(best.price===null&&best.title){
+    try{
+      const u='https://shopee.com.br/api/v4/search/search_items?by=relevancy&keyword='+encodeURIComponent(best.title.slice(0,120))+'&limit=50&newest=0&order=desc&page_type=search&scenario=PAGE_GLOBAL_SEARCH&version=2';
+      const r=await fetch(u,{headers:{...headers,referer:'https://shopee.com.br/'},signal:AbortSignal.timeout(12000)});
+      if(r.ok){
+        const j=await r.json(),items=j?.items||j?.data?.items||[];
+        const hit=items.map(x=>x?.item_basic||x).find(x=>String(x?.itemid??x?.item_id??'')===String(itemId));
+        if(hit){
+          const p=normalizeShopeePublicPrice(hit?.price_min??hit?.price??hit?.priceMin);
+          const prev=normalizeShopeePublicPrice(hit?.price_min_before_discount??hit?.price_before_discount);
+          if(Number.isFinite(p)&&p>0)best.price=p;
+          if(Number.isFinite(prev)&&prev>0)best.previous=prev;
+          if(!best.imageUrl)best.imageUrl=publicProductImage(hit?.image||hit?.images?.[0]||'');
+        }
+      }
     }catch{}
   }
   return best;
