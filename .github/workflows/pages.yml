@@ -53,6 +53,12 @@ jobs:
           if 'account-session.js?v=002' not in text:
               text = text.replace('</body>', '<script type="module" src="./account-session.js?v=002"></script>\n</body>')
           index.write_text(text, encoding='utf-8')
+
+          auth = Path('auth.html')
+          auth_text = auth.read_text(encoding='utf-8')
+          if 'auth-resilience.js?v=001' not in auth_text:
+              auth_text = auth_text.replace('</body>', '<script type="module" src="./auth-resilience.js?v=001"></script>\n</body>')
+          auth.write_text(auth_text, encoding='utf-8')
           PY
 
       - name: Verify production wiring
@@ -69,7 +75,10 @@ jobs:
           grep -q 'user-scalable=no' index.html
           grep -q 'Telegram para operação' index.html
           grep -q 'data-target="password"' auth.html
-          grep -q "afilia-v15" sw.js
+          grep -q 'auth-resilience.js?v=001' auth.html
+          grep -q 'signInWithRetry' auth-resilience.js
+          grep -q "afilia-v16" sw.js
+          grep -q 'auth-resilience.js' sw.js
           grep -q 'openTemplatesManager' templates.js
           grep -q 'setOfferMode' offer-mode.js
           grep -q 'ter API configurada não muda este modo automaticamente' offer-mode.js
