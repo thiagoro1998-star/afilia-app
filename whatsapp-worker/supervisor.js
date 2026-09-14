@@ -1,5 +1,8 @@
 import { spawn } from 'node:child_process';
 
+// Final Shopee fallback patch runs here as a safety net after the normal startup patch chain.
+await import('./patch-shopee-seo-price.mjs');
+
 const specs = [
   { name: 'whatsapp-main', file: 'worker-v5-media.js' },
   { name: 'shopee', file: 'shopee-resolver.js' }
