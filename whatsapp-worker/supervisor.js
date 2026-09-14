@@ -1,7 +1,8 @@
 import { spawn } from 'node:child_process';
 
-// Final Shopee fallback patch runs here as a safety net after the normal startup patch chain.
+// Final Shopee fallback patches run here as a safety net after the normal startup patch chain.
 await import('./patch-shopee-seo-price.mjs');
+await import('./patch-shopee-catalog-broker.mjs');
 
 const specs = [
   { name: 'whatsapp-main', file: 'worker-v5-media.js' },
