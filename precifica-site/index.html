@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Precifica 3D</title>
+<meta name="description" content="Calculadora profissional de precificação para impressão 3D">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="head">
+      <div class="brand"><div class="logo">3D</div><div><h1>Precifica 3D</h1><div class="muted">Custo real, preço por canal e lucro líquido.</div></div></div>
+      <div class="actions"><button class="btn" id="exportBtn">Exportar presets</button><button class="btn" id="importBtn">Importar</button><input id="importFile" type="file" accept="application/json" hidden><button class="btn primary" id="resetBtn">Novo cálculo</button></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <section class="card span2">
+      <div class="ch"><div class="num">01</div><div><h2>Projeto e peças</h2><div class="muted">Informe apenas o que souber. Os nomes são opcionais.</div></div></div>
+      <div class="cb">
+        <div class="row">
+          <div class="f s6"><label>Nome do projeto <span class="muted">(opcional)</span></label><input class="input" id="projectName" placeholder="Ex.: Kit chaveiro gamer"></div>
+          <div class="f s6"><label>Modo</label><div class="pills"><button class="pill active" data-mode="equal">Peças iguais</button><button class="pill" data-mode="different">Projetos diferentes na mesma mesa</button></div></div>
+        </div>
+        <h3 class="title" style="margin-top:16px">Peças do projeto</h3>
+        <div id="pieces"></div>
+        <button class="btn" id="addPiece">+ Adicionar peça</button>
+        <details><summary>Reserva para falhas (avançado)</summary><div class="box"><div class="row"><div class="f s6"><label>Reserva</label><select id="failurePreset"><option value="0">0% — não incluir</option><option value="1">1% — conservadora leve</option><option value="3">3% — moderada</option><option value="5">5% — alta</option><option value="custom">Personalizado</option></select></div><div class="f s6 hidden" id="failureCustomWrap"><label>Percentual personalizado</label><input class="input" id="failureCustom" type="number" min="0" step="0.1" value="0"></div></div><div class="hint">Comece em 0% ou 1%. Use um percentual maior só quando tiver histórico de falhas.</div></div></details>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="ch"><div class="num">02</div><div><h2>Material</h2><div class="muted">Filamento e custo por grama.</div></div></div>
+      <div class="cb">
+        <div class="row"><div class="f s6"><label>Preset de filamento</label><select id="filamentPreset"></select></div><div class="f s6"><label>Material</label><select id="material"><option>PLA</option><option>PETG</option><option>ABS</option><option>ASA</option><option>TPU</option><option>Outro</option></select></div></div>
+        <div class="stats" style="margin-top:13px"><div class="stat"><div class="k">Preço do rolo</div><div class="v" id="filPrice">R$ 0,00</div></div><div class="stat"><div class="k">Peso do rolo</div><div class="v" id="filWeight">0 g</div></div><div class="stat a"><div class="k">Custo por grama</div><div class="v" id="filCostG">R$ 0,000/g</div></div></div>
+        <button class="btn" style="margin-top:12px" data-open="filamentModal">Editar filamentos</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="ch"><div class="num">03</div><div><h2>Impressora e energia</h2><div class="muted">Consumo, manutenção e custo elétrico.</div></div></div>
+      <div class="cb">
+        <div class="row"><div class="f s6"><label>Impressora</label><select id="printerPreset"></select></div><div class="f s6"><label>Consumo médio usado (W)</label><input class="input" id="printerWatts" type="number" min="0"><div class="hint">Estimativa de impressão; não é potência máxima da fonte.</div></div></div>
+        <div class="row" style="margin-top:10px"><div class="f s6"><label>Reserva de manutenção (R$/h)</label><input class="input" id="maintenanceHour" type="number" min="0" step="0.01"><div class="hint">Premissa para limpeza, lubrificação, álcool, panos, bicos e desgaste.</div></div><div class="f s6"><label>&nbsp;</label><button class="btn" data-open="printerModal">Editar / adicionar impressora</button></div></div>
+        <div class="box" style="margin-top:14px">
+          <h3 class="title">Custo de energia (kWh)</h3>
+          <div class="pills"><button class="pill energyMode active" data-energy="bill">Da conta · mais preciso</button><button class="pill energyMode" data-energy="reference">Estado + cidade</button><button class="pill energyMode" data-energy="manual">Manual</button></div>
+          <div id="energyBill"><div class="row"><div class="f s6"><label>Valor total da conta (R$)</label><input class="input" id="billValue" type="number" min="0" step="0.01" placeholder="Ex.: 210,50"></div><div class="f s6"><label>Consumo da conta (kWh)</label><input class="input" id="billKwh" type="number" min="0" step="0.01" placeholder="Ex.: 220"></div></div></div>
+          <div id="energyReference" class="hidden"><div class="row"><div class="f s6"><label>Estado</label><select id="stateSelect"></select></div><div class="f s6"><label>Cidade</label><select id="citySelect"><option>Selecione o estado</option></select></div></div><div class="hint">A cidade é selecionável. Sem associação segura à distribuidora, o sistema usa estimativa estadual e sinaliza isso.</div></div>
+          <div id="energyManual" class="hidden"><label>R$/kWh</label><input class="input" id="manualKwh" type="number" min="0" step="0.01" value="1"></div>
+          <div class="stats" style="margin-top:12px"><div class="stat a"><div class="k">Valor usado</div><div class="v" id="kwhUsed">R$ 0,00/kWh</div></div><div class="stat"><div class="k">Origem</div><div class="v" style="font-size:13px" id="kwhSource">Aguardando conta</div></div><div class="stat"><div class="k">Energia do projeto</div><div class="v" id="energyCost">R$ 0,00</div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card span2">
+      <div class="ch"><div class="num">04</div><div><h2>Produto final</h2><div class="muted">Embalagens, insumos, acabamento e frete.</div></div></div>
+      <div class="cb">
+        <div class="grid">
+          <div class="box"><h3 class="title">Embalagens</h3><div class="items" id="packagingRows"></div><div class="inline"><button class="btn" id="addPackaging">+ Adicionar embalagem</button><button class="btn" data-open="packagingModal">Editar catálogo</button></div><div class="hint">O editor possui calculadora de lote: valor pago ÷ quantidade comprada.</div></div>
+          <div class="box"><h3 class="title">Insumos e acabamento</h3><div class="items" id="supplyRows"></div><div class="inline"><button class="btn" id="addSupply">+ Adicionar insumo</button><button class="btn" data-open="supplyModal">Editar catálogo</button></div></div>
+          <div class="box"><h3 class="title">Frete pago por você</h3><label>Valor por unidade</label><input class="input" id="sellerFreight" type="number" min="0" step="0.01" value="0"></div>
+          <div class="box"><h3 class="title">Pós-processamento</h3><select id="postProcess"><option value="0">Sai pronta · R$ 0</option><option value="0.5">Montagem rápida · R$ 0,50</option><option value="2">Lixamento/acabamento · R$ 2,00</option><option value="5">Pintura · R$ 5,00</option><option value="custom">Personalizado</option></select><input class="input hidden" id="postCustom" type="number" min="0" step="0.01" placeholder="Custo por unidade" style="margin-top:8px"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="ch"><div class="num">05</div><div><h2>Impostos e caixa</h2><div class="muted">CPF, MEI, Simples e outros perfis.</div></div></div>
+      <div class="cb">
+        <label>Perfil fiscal</label>
+        <select id="taxProfile"><option value="none">Não sei / não incluir</option><option value="cpf">Pessoa Física (CPF)</option><option value="meiCommerce">MEI — Comércio/Indústria</option><option value="meiService">MEI — Serviços</option><option value="meiBoth">MEI — Comércio + Serviços</option><option value="simplesCommerce">Simples Nacional — Comércio</option><option value="simplesIndustry">Simples Nacional — Indústria</option><option value="presumed">Lucro Presumido</option><option value="real">Lucro Real</option><option value="other">Outro / personalizado</option></select>
+        <div class="note" id="taxInfo" style="margin-top:10px"></div>
+        <div class="box hidden" id="simplesBox" style="margin-top:12px"><div class="row"><div class="f s6"><label>Faturamento acumulado em 12 meses (RBT12)</label><input class="input" id="rbt12" type="number" min="0" step="100"></div><div class="f s6"><label>Alíquota efetiva calculada</label><input class="input" id="simplesRate" readonly></div></div></div>
+        <details><summary>Opções fiscais avançadas</summary><div class="box"><label>Alíquota manual sobre a venda (%)</label><input class="input" id="manualTaxRate" type="number" min="0" step="0.01" value="0"><label class="check" style="margin-top:10px"><input type="checkbox" id="meiAllocate"> Ratear custo mensal do MEI por pedido</label><div id="meiOrdersWrap" class="hidden" style="margin-top:8px"><label>Pedidos/mês usados no rateio</label><input class="input" id="meiOrders" type="number" min="1" value="50"></div></div></details>
+        <div class="box" style="margin-top:12px"><h3 class="title">Ads / CAC</h3><label class="check"><input type="checkbox" id="adsOn"> Tenho histórico de anúncios</label><div id="adsBox" class="row hidden" style="margin-top:9px"><div class="f s6"><label>Gasto em anúncios</label><input class="input" id="adsSpend" type="number" min="0" step="0.01"></div><div class="f s6"><label>Pedidos atribuídos</label><input class="input" id="adsOrders" type="number" min="1"></div></div><div class="hint" id="cacHint">Sem histórico, CAC = R$ 0.</div></div>
+        <div class="box" style="margin-top:12px"><h3 class="title">Reserva perdas/devoluções</h3><select id="lossReserve"><option value="0">0%</option><option value="1" selected>1% — conservadora</option><option value="2">2% — moderada</option><option value="custom">Personalizado</option></select><input class="input hidden" id="lossCustom" type="number" min="0" step="0.1" placeholder="%" style="margin-top:8px"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="ch"><div class="num">06</div><div><h2>Precificação e canal</h2><div class="muted">Taxas automáticas por padrão.</div></div></div>
+      <div class="cb">
+        <h3 class="title">Canal principal</h3><div class="tabs" id="marketTabs"></div>
+        <div class="note" id="channelInfo"></div><div class="box" id="channelOptions" style="margin-top:10px"></div>
+        <h3 class="title" style="margin-top:15px">Como quer chegar ao preço?</h3><div class="pills"><button class="pill orange active" data-price-mode="suggest">Precifica sugere · INICIANTE</button><button class="pill orange" data-price-mode="profit">Quero R$ de lucro</button><button class="pill orange" data-price-mode="margin">Quero % de margem</button><button class="pill orange" data-price-mode="markup">Quero usar markup</button></div>
+        <div class="box" id="suggestBox"><div class="row"><div class="f s6"><label>Perfil da sugestão</label><select id="suggestProfile"><option value="economic">Econômico</option><option value="balanced" selected>Equilibrado</option><option value="strong">Forte · mais folga</option></select></div><div class="f s6"><label>Meta automática de lucro líquido</label><div class="v big" id="suggestProfit">R$ 0,00</div></div></div><div class="hint">Referência financeira, não pesquisa de concorrentes.</div></div>
+        <div class="box hidden" id="profitBox"><label>Lucro líquido desejado por unidade</label><input class="input" id="targetProfit" type="number" min="0" step="0.01" value="10"></div>
+        <div class="box hidden" id="marginBox"><label>Margem líquida desejada (%)</label><input class="input" id="targetMargin" type="number" min="0" max="95" step="0.1" value="40"></div>
+        <div class="box hidden" id="markupBox"><label>Markup sobre o custo (%)</label><input class="input" id="targetMarkup" type="number" min="0" step="10" value="300"></div>
+        <div class="box" style="margin-top:12px"><h3 class="title">Não sei quanto cobrar</h3><div class="muted" id="scenarioChannel"></div><div class="choices" id="priceChoices" style="margin-top:9px"></div></div>
+        <details><summary>Configuração avançada do canal</summary><div class="box"><div class="row"><div class="f s6"><label>Sobrescrever comissão (%)</label><input class="input" id="overridePct" type="number" step="0.01" placeholder="vazio = automático"></div><div class="f s6"><label>Somar taxa fixa manual (R$)</label><input class="input" id="overrideFixed" type="number" step="0.01" value="0"></div></div></div></details>
+      </div>
+    </section>
+
+    <section class="card span2">
+      <div class="ch"><div class="num">07</div><div><h2>Resultado</h2><div class="muted">Custos, descontos, lucro e comparativo entre canais.</div></div></div>
+      <div class="cb">
+        <div class="stats"><div class="stat"><div class="k">Custo completo / unidade</div><div class="v" id="resCost">R$ 0,00</div></div><div class="stat a"><div class="k">Preço sugerido</div><div class="v" id="resPrice">R$ 0,00</div></div><div class="stat"><div class="k">Recebimento líquido</div><div class="v" id="resReceived">R$ 0,00</div></div><div class="stat"><div class="k">Lucro líquido</div><div class="v good" id="resProfit">R$ 0,00</div></div><div class="stat"><div class="k">Margem líquida</div><div class="v" id="resMargin">0%</div></div><div class="stat"><div class="k">Markup efetivo</div><div class="v" id="resMarkup">0%</div></div></div>
+        <div class="grid" style="margin-top:14px"><div class="box"><h3 class="title">Quebra de custos</h3><div id="costBreakdown"></div></div><div class="box"><h3 class="title">Quebra de descontos</h3><div id="feeBreakdown"></div></div></div>
+        <h3 class="title" style="margin-top:17px">Comparativo por canal — mesma meta de lucro</h3>
+        <div class="table"><table><thead><tr><th>Canal</th><th>Preço necessário</th><th>Taxas</th><th>Recebimento</th><th>Lucro</th><th>Margem</th><th>Precisão</th></tr></thead><tbody id="compareBody"></tbody></table></div>
+        <div class="muted" style="margin-top:12px">Regras principais: Mercado Livre — Universidade de Vendedores; Amazon Brasil — tabela oficial por categoria; TikTok Shop Seller University. Shopee e algumas condições Magalu aparecem como referência quando a grade pública não é única/estável.</div>
+      </div>
+    </section>
+  </div>
+  <div class="sticky"><div><div class="muted" style="color:#b9c0c8">Canal principal</div><b id="stickyChannel">Venda direta</b></div><div><span class="muted" style="color:#b9c0c8">Preço sugerido</span> <strong class="big" id="stickyPrice">R$ 0,00</strong></div></div>
+  <div class="footer">Precifica 3D · motor 1.0.0 · presets salvos no navegador. Confirme taxas do Seller Center antes de decisões importantes.</div>
+</div>
+
+<div class="modal" id="filamentModal"><div class="modalBox"><div class="modalHead"><h3>Meus filamentos</h3><button class="icon" data-close>✕</button></div><div id="filamentEditor"></div><button class="btn primary" id="addFilamentPreset">+ Novo filamento</button></div></div>
+<div class="modal" id="printerModal"><div class="modalBox"><div class="modalHead"><h3>Minhas impressoras</h3><button class="icon" data-close>✕</button></div><div class="neutral">Consumo e manutenção são estimativas editáveis de planejamento.</div><div id="printerEditor" style="margin-top:10px"></div><button class="btn primary" id="addPrinterPreset">+ Adicionar sua impressora</button></div></div>
+<div class="modal" id="packagingModal"><div class="modalBox"><div class="modalHead"><h3>Catálogo de embalagens</h3><button class="icon" data-close>✕</button></div><div id="packagingEditor"></div><button class="btn primary" id="addPackagingPreset">+ Nova embalagem</button></div></div>
+<div class="modal" id="supplyModal"><div class="modalBox"><div class="modalHead"><h3>Catálogo de insumos</h3><button class="icon" data-close>✕</button></div><div id="supplyEditor"></div><button class="btn primary" id="addSupplyPreset">+ Novo insumo</button></div></div>
+
+<script src="./app.js"></script>
+</body></html>
