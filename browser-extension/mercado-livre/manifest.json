@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Afilia Mercado Livre Bridge",
+  "version": "0.1.0",
+  "description": "Ponte segura entre o Afilia e as ferramentas oficiais de afiliados do Mercado Livre.",
+  "permissions": ["storage", "tabs", "scripting", "alarms"],
+  "host_permissions": [
+    "https://www.mercadolivre.com.br/*",
+    "https://mercadolivre.com.br/*",
+    "https://api.mercadolibre.com/*",
+    "https://yjgwlofhordbmjomxcdx.supabase.co/*",
+    "https://thiagoro1998-star.github.io/afilia-app/*"
+  ],
+  "background": {"service_worker": "background.js"},
+  "action": {"default_popup": "popup.html", "default_title": "Afilia Mercado Livre"},
+  "content_scripts": [
+    {
+      "matches": ["https://www.mercadolivre.com.br/*", "https://mercadolivre.com.br/*"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["page-hook.js"],
+      "matches": ["https://www.mercadolivre.com.br/*", "https://mercadolivre.com.br/*"]
+    }
+  ]
+}
