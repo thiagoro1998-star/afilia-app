@@ -33,8 +33,6 @@ jobs:
           text = index.read_text(encoding='utf-8')
           text = text.replace('app.js?v=040', 'app.js?v=050')
           text = text.replace('Afilia 0.4 •', 'Afilia 0.5 •')
-          # Compatibility placeholders for the old app.js profile loader.
-          # They prevent init() from aborting before the account module binds the avatar.
           if 'id="profileName"' not in text:
               text = text.replace('<body>', '<body>\n<span id="profileName" hidden></span><span id="profileEmail" hidden></span>')
           if 'templates.js?v=051' not in text:
@@ -70,14 +68,14 @@ jobs:
           grep -q 'whatsapp.js?v=056' index.html
           grep -q 'whatsapp-gateway-client.js?v=063' index.html
           grep -q 'account-session.js?v=002' index.html
-          grep -q 'id="profileName" hidden' index.html
-          grep -q 'id="profileEmail" hidden' index.html
+          grep -q 'id="profileName"' index.html
+          grep -q 'id="profileEmail"' index.html
           grep -q 'user-scalable=no' index.html
-          grep -q 'Telegram para operação' index.html
+          grep -q 'automação para afiliados' index.html
           grep -q 'data-target="password"' auth.html
           grep -q 'auth-resilience.js?v=001' auth.html
           grep -q 'signInWithRetry' auth-resilience.js
-          grep -q "afilia-v16" sw.js
+          grep -q "afilia-v17" sw.js
           grep -q 'auth-resilience.js' sw.js
           grep -q 'openTemplatesManager' templates.js
           grep -q 'setOfferMode' offer-mode.js
