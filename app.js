@@ -1,6 +1,6 @@
 await import('./app-core.js?v=053');
 await import('./templates.js?v=002');
-await import('./mirror.js?v=003');
+await import('./mirror.js?v=004');
 await import('./whatsapp-ui-fix.js?v=053');
 
 let mirrorGroupUxBusy=false;
@@ -131,6 +131,10 @@ function mgSnapshotForm(){
     end:document.getElementById('mirEnd')?.value||'23:59',
     interval:document.getElementById('mirInterval')?.value||'0',
     device:document.getElementById('mirDevice')?.value||'',
+    template:document.getElementById('mirTemplate')?.value||'',
+    cloneCoupons:!!document.getElementById('mirCloneCoupons')?.checked,
+    couponTemplate:document.getElementById('mirCouponTemplate')?.value||'',
+    couponMarketplace:document.getElementById('mirCouponMarketplace')?.value||'',
     active:!!document.getElementById('mirActive')?.checked,
     creating:/Criar novo espelhamento/i.test(document.getElementById('modalBody')?.textContent||'')
   };
@@ -151,6 +155,10 @@ function mgRestoreForm(s){
   set('mirEnd',s.end);
   set('mirInterval',s.interval);
   set('mirDevice',s.device);
+  set('mirTemplate',s.template);
+  set('mirCouponTemplate',s.couponTemplate);
+  set('mirCouponMarketplace',s.couponMarketplace);
+  const cc=document.getElementById('mirCloneCoupons'); if(cc)cc.checked=!!s.cloneCoupons;
   const a=document.getElementById('mirActive');
   if(a)a.checked=s.active;
   if(typeof window.renderMirrorTargets==='function')window.renderMirrorTargets();
